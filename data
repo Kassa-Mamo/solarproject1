@@ -1,0 +1,103 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load datasets
+df_sierra_bumbuna = pd.read_csv('data/solar-measurements_sierraleone-bumbuna_qc.csv')
+df_sierra_kenema = pd.read_csv('data/solar-measurements_sierraleone-kenema_qc.csv')
+df_togo_dapaong = pd.read_excel('data/solar-measurements_togo-dapaong_header_fr_en.xlsx')
+
+# Data Exploration
+print("Bumbuna Dataset Head:")
+print(df_sierra_bumbuna.head())
+print("\nKenema Dataset Head:")
+print(df_sierra_kenema.head())
+
+# Checking for missing values and data types
+print("\nBumbuna Dataset Info:")
+print(df_sierra_bumbuna.info())
+print("\nKenema Dataset Info:")
+print(df_sierra_kenema.info())
+
+# Handling missing values
+df_sierra_bumbuna.dropna(inplace=True)  # Drop rows with missing values in Bumbuna dataset
+df_sierra_kenema.fillna(0, inplace=True)  # Fill missing values with 0 in Kenema dataset
+
+# Convert 'timestamp' to datetime format
+df_sierra_bumbuna['timestamp'] = pd.to_datetime(df_sierra_bumbuna['timestamp'], errors='coerce')
+df_sierra_kenema['timestamp'] = pd.to_datetime(df_sierra_kenema['timestamp'], errors='coerce')
+
+# Ensure conversion was successful
+df_sierra_bumbuna.dropna(subset=['timestamp'], inplace=True)
+df_sierra_kenema.dropna(subset=['timestamp'], inplace=True)
+
+# Descriptive statistics
+print("\nBumbuna Dataset Statistics:")
+print(df_sierra_bumbuna.describe())
+print("\nKenema Dataset Statistics:")
+print(df_sierra_kenema.describe())
+
+# Plotting histogram for solar measurements in Bumbuna
+plt.figure(figsize=(10, 6))
+sns.histplot(df_sierra_bumbuna['solar_measurement'], kde=True)
+plt.title('Distribution of Solar Measurements - Bumbuna')
+plt.xlabel('Solar Measurement')
+plt.ylabel('Frequency')
+plt.show()
+
+# Plotting time series for solar measurements in Kenema
+plt.figure(figsize=(10, 6))
+plt.plot(df_sierra_kenema['timestamp'], df_sierra_kenema['solar_measurement'], label='Kenema')
+plt.title('Time Series of Solar Measurements - Kenema')
+plt.xlabel('Time')
+plt.ylabel('Solar Measurement')
+plt.xticks(rotation=45)
+plt.legend()
+plt.show()
+
+# Correlation analysis (Bumbuna dataset)
+correlation_bumbuna = df_sierra_bumbuna[['solar_measurement', 'temperature']].corr()
+print("\nCorrelation Matrix (Bumbuna Dataset):")
+print(correlation_bumbuna)
+
+# Handling outliers in solar_measurement (e.g., removing extreme values)
+df_sierra_bumbuna = df_sierra_bumbuna[df_sierra_bumbuna['solar_measurement'] < 1000]
+
+# Feature engineering: Add 'day_of_week' feature
+df_sierra_bumbuna['day_of_week'] = df_sierra_bumbuna['timestamp'].dt.day_name()
+
+# Prepare data for machine learning
+if 'target_variable' in df_sierra_bumbuna.columns:
+    X = df_sierra_bumbuna.drop('target_variable', axis=1)
+    y = df_sierra_bumbuna['target_variable']
+
+    # Splitting data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train a linear regression model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    y_pred = model.predict(X_test)
+    print("\nModel Evaluation:")
+    print("MSE:", mean_squared_error(y_test, y_pred))
+    print("R-squared:", r2_score(y_test, y_pred))
+
+    # Scatter plot of actual vs predicted values
+    plt.scatter(y_test, y_pred, alpha=0.6)
+    plt.title('Actual vs Predicted Values')
+    plt.xlabel('Actual Values')
+    plt.ylabel('Predicted Values')
+    plt.show()
+
+# Correlation heatmap for Bumbuna dataset
+plt.figure(figsize=(10, 6))
+sns.heatmap(df_sierra_bumbuna.corr(), annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix - Bumbuna Dataset')
+plt.show()
